@@ -408,7 +408,12 @@ dtrace_gethrtime()
 	/*   to tsc and return nsec.		       */
 	/***********************************************/
 	if (native_sched_clock_ptr) {
-		return (*native_sched_clock_ptr)();
+		hrtime_t ret;
+		preempt_disable();
+		ret = (*native_sched_clock_ptr)();
+		preempt_enable();
+
+		return ret;
 	}
 	/***********************************************/
 	/*   Later  kernels  use this to allow access  */
