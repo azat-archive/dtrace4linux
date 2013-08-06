@@ -375,10 +375,11 @@ dtrace_xcall1(processorid_t cpu, dtrace_xcall_t func, void *arg)
 		dtrace_printf("x_call: re-entrant call in progress (%d) other=%d.\n", cnt_xcall0, in_xcall); 
 		cnt_xcall0++; 
 	}
-	in_xcall = smp_processor_id();
+	in_xcall = get_cpu();
 //int flags = dtrace_interrupt_disable();
 	dtrace_xcall2(cpu, func, arg);
 //dtrace_interrupt_enable(flags);
+	put_cpu();
 	in_xcall = -1;
 }
 void
