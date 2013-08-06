@@ -133,6 +133,7 @@ dtrace_vprintf(const char *fmt, va_list ap)
 	short	l_mode;
 	short	zero;
 	short	width;
+	int     this_cpu;
 static char digits[] = "0123456789abcdef";
 	hrtime_t hrt = dtrace_gethrtime();
 static hrtime_t	hrt0;
@@ -148,12 +149,14 @@ static hrtime_t	hrt0;
 	if (dtrace_printf_disable)
 		return;
 
+	this_cpu = get_cpu();
+
 	/***********************************************/
 	/*   Try  and  avoid intermingled output from  */
 	/*   the  other  cpus.  Dont  do  this  if we  */
 	/*   interrupt our own cpu.		       */
 	/***********************************************/
-	while (dtrace_printf_lock >= 0 && dtrace_printf_lock != smp_processor_id())
+	while (dtrace_printf_lock >= 0 && dtrace_printf_lock != this_cpu)
 		;
 	/***********************************************/
 	/*   Allow a blank string - dont generate any  */
@@ -162,9 +165,11 @@ static hrtime_t	hrt0;
 	/*   for  any  locks,  but not grab the lock,  */
 	/*   just for a bit more entropy.	       */
 	/***********************************************/
-	if (*fmt == '\0')
+	if (*fmt == '\0') {
+		put_cpu();
 		return;
-	dtrace_printf_lock = smp_processor_id();
+	}
+	dtrace_printf_lock = this_cpu;
 
 	/***********************************************/
 	/*   Add in timestamp.			       */
@@ -198,7 +203,7 @@ static hrtime_t	hrt0;
 	/*   Add the current CPU.		       */
 	/***********************************************/
 	ADDCH('#');
-	dtrace_printf_int(smp_processor_id());
+	dtrace_printf_int(this_cpu);
 	ADDCH(' ');
 	dtrace_printf_int(get_current()->pid);
 	if (irqs_disabled()) {
@@ -206,6 +211,8 @@ static hrtime_t	hrt0;
 	} else {
 		ADDCH(':');
 	}
+
+	put_cpu();
 
 	while ((ch = *fmt++) != '\0') {
 		if (ch != '%') {

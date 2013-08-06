@@ -246,10 +246,21 @@ void *vmem_create(const char *name, void *base, size_t size, size_t quantum,
 extern int panic_quiesce;
 
 # if linux
-#	define	cpu_get_id()	smp_processor_id()
+/**
+ * This is just hot fix, to not modifying all places now where this macros is used
+ * This inline function, definitly may not work properly in some places,
+ * we need manually check it.
+ */
+static inline int cpu_get_id() {
+	int cpu = get_cpu();
+	put_cpu();
+
+	return cpu;
+}
 # else
 #	define	cpu_get_id()	CPU->cpu_id
 # endif
+
 # define copyin(a, b, c) copy_from_user(b, a, c)
 # define copyout(a, b, c) copy_to_user(b, a, c)
 
