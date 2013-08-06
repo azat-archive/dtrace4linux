@@ -166,7 +166,7 @@ mutex_enter_common(mutex_t *mp, int dflag)
 	}
 //preempt_disable();
 	mp->m_flags = flags;
-	mp->m_cpu = smp_processor_id();
+	mp->m_cpu = this_cpu;
 	mp->m_level = 1;
 	mp->m_type = dflag;
 
