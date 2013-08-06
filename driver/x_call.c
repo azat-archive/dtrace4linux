@@ -385,7 +385,7 @@ dtrace_xcall1(processorid_t cpu, dtrace_xcall_t func, void *arg)
 void
 dtrace_xcall2(processorid_t cpu, dtrace_xcall_t func, void *arg)
 {	int	c;
-	int	cpu_id = smp_processor_id();
+	int	cpu_id = get_cpu();
 	int	cpus_todo = 0;
 # if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 24)
 typedef struct cpumask cpumask_t;
@@ -401,7 +401,7 @@ typedef struct cpumask cpumask_t;
 	/*   caused the panic.			       */
 	/***********************************************/
 	if (dtrace_shutdown)
-		return;
+		goto ret;
 	/***********************************************/
 	/*   Special case - just 'us'.		       */
 	/***********************************************/
@@ -411,7 +411,7 @@ typedef struct cpumask cpumask_t;
 //dtrace_printf("[%d] sole cnt=%lu\n", smp_processor_id(), cnt_xcall1);
 		func(arg);
 		local_irq_enable();
-		return;
+		goto ret;
 	}
 
 	/***********************************************/
@@ -490,18 +490,18 @@ typedef struct cpumask cpumask_t;
 if(0)
 			if ((cnt == 0 && xcall_debug) || !(xcall_debug && cnt == 50)) {
 				dtrace_printf("[%d] cpu%d in wrong state (state=%d)\n",
-					smp_processor_id(), c, xc->xc_state);
+					cpu_id, c, xc->xc_state);
 			}
 //			xcall_slave2();
 			if (cnt == 100 * 1000 * 1000) {
 				dtrace_printf("[%d] cpu%d - busting lock\n",
-					smp_processor_id(), c);
+					cpu_id, c);
 				break;
 			}
 		}
 		if ((cnt && xcall_debug) || (!xcall_debug && cnt > 50)) {
 			dtrace_printf("[%d] cpu%d in wrong state (state=%d) %u cycles\n",
-				smp_processor_id(), c, xc->xc_state, cnt);
+				cpu_id, c, xc->xc_state, cnt);
 		}
 		/***********************************************/
 		/*   As  soon  as  we set xc_state and BEFORE  */
@@ -535,7 +535,7 @@ if(0)
 	}
 
 	if (xcall_debug)
-		dtrace_printf("[%d] getting ready.... (%ld) mask=%x func=%p\n", smp_processor_id(), cnt_xcall1, *(int *) &mask, func);
+		dtrace_printf("[%d] getting ready.... (%ld) mask=%x func=%p\n", cpu_id, cnt_xcall1, *(int *) &mask, func);
 
 	/***********************************************/
 	/*   Wait for the cpus we invoked the IPI on.  */
@@ -563,6 +563,9 @@ break;
 //	smp_mb();
 
 	xcall_levels[cpu_id]--;
+
+ret:
+	put_cpu();
 }
 #endif
 
