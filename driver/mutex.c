@@ -78,6 +78,7 @@ void
 mutex_enter_common(mutex_t *mp, int dflag)
 {       unsigned long flags;
 	unsigned int  cnt;
+	int this_cpu;
 
 	if (!mp->m_initted) {
 		/***********************************************/
@@ -117,11 +118,13 @@ mutex_enter_common(mutex_t *mp, int dflag)
 	/*   Turn  off  for  now.  Later  on,  we can  */
 	/*   delete the code below.		       */
 	/***********************************************/
-	if (0 && mp->m_count && mp->m_cpu == smp_processor_id()) {
+	this_cpu = get_cpu();
+	if (0 && mp->m_count && mp->m_cpu == this_cpu) {
 		static int x;
 		if (x++ < 4 || (x < 1000000 && (x % 5000) == 0))
 		    dtrace_printf("%p mutex recursive, dflag=%d %d [%d]\n", mp, dflag, mp->m_type, x);
 		mp->m_level++;
+		put_cpu();
 		return;
 	}
 
@@ -166,6 +169,8 @@ mutex_enter_common(mutex_t *mp, int dflag)
 	mp->m_cpu = smp_processor_id();
 	mp->m_level = 1;
 	mp->m_type = dflag;
+
+	put_cpu();
 }
 
 /**********************************************************************/
@@ -186,6 +191,7 @@ void
 mutex_enter(mutex_t *mp)
 {
 	mutex_t imp = *mp;
+	int this_cpu;
 /*static int f;
 if (f++ == 70) {
 	int c = smp_processor_id();
@@ -201,9 +207,11 @@ if (f++ == 70) {
 	/*   Try  and  detect a nested call from this  */
 	/*   cpu whilst the mutex is held.	       */
 	/***********************************************/
-	if (mp->m_count && mp->m_type && mp->m_cpu == smp_processor_id()) {
+	this_cpu = get_cpu();
+	if (mp->m_count && mp->m_type && mp->m_cpu == this_cpu) {
 		dtrace_printf("%p mutex...fail in mutex_enter count=%d type=%d\n", mp, mp->m_count, mp->m_type);
 	}
+	put_cpu();
 
 	cnt_mtx2++;
 	mutex_enter_common(mp, FALSE);
