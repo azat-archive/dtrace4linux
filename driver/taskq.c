@@ -259,6 +259,11 @@ taskqid_t
 taskq_dispatch2(taskq_t *tq, task_func_t func, void *arg, uint_t flags, unsigned long delay)
 {	my_work_t *work;
 
+	if (!tq || !func) {
+		WARN_ON(1);
+		return -1;
+	}
+
 	if (!taskq_enabled)
 		return 0;
 
